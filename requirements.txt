@@ -1,0 +1,9 @@
+# Core dependencies for team-of-ai-agents (integrate/xagent branch)
+git+https://github.com/OpenBMB/XAgent.git
+
+# Optional: common dependencies (fill as you discover them)
+# langchain>=0.0.300
+# openai>=1.0.0
+# fastapi
+# uvicorn
+# requests
