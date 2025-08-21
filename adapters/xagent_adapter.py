@@ -1,75 +1,64 @@
 """
-adapters/xagent_adapter.py
-
-XAgent adapter skeleton for team-of-ai-agents.
+XAgent adapter for team-of-ai-agents
 
 Purpose:
-  - Provide an adapter class that implements the interface expected by the
-    rest of the repo (where LangChain ReAct agent was used).
-  - Convert L3AGI tool definitions -> XAgent tool format.
-  - Call XAgent run/invoke API and convert XAgent outputs -> L3AGI expected format.
-
-How to use (future):
-  - Replace imports that instantiate or call ReAct agents with this adapter.
-  - Implement `run`/`invoke` to call XAgent SDK/API.
-
-TODO:
-  - Implement tool conversion helpers.
-  - Add tests / smoke script.
-  - Add XAgent to requirements or add install instructions in README.
-
-Author: automated helper
+- Replace LangChain ReAct agent with OpenBMB XAgent
+- Provide a drop-in adapter exposing .invoke() and .run()
 """
+
 from typing import Any, Dict, Iterable, List, Optional
 
-class XAgentAdapter:
-    """Minimal adapter skeleton — replace stubs with real XAgent calls."""
+# Import XAgent APIs
+try:
+    from xagent.controller import Controller
+    from xagent.config import Config
+except ImportError:
+    raise ImportError("XAgent is not installed. Run: pip install git+https://github.com/OpenBMB/XAgent.git")
 
-    def __init__(self, model: Optional[str] = None, tools: Optional[Iterable] = None, prompt: Optional[str] = None):
+class XAgentAdapter:
+    """Adapter wrapper around OpenBMB XAgent."""
+
+    def __init__(self, model: Optional[str] = "gpt-4", tools: Optional[Iterable] = None, prompt: Optional[str] = None):
         """
-        model: model id / name to pass to XAgent (if applicable)
-        tools: iterable of tool specs in L3AGI format (adapter should convert them)
-        prompt: optional base prompt or prompt template
+        model: model name or id (depends on backend config)
+        tools: list of tool objects from L3AGI to be converted
+        prompt: optional initial system prompt
         """
         self.model = model
         self.tools = tools or []
-        self.prompt = prompt
+        self.prompt = prompt or "You are XAgent integrated into L3AGI."
 
-        # TODO: instantiate XAgent client here once XAgent is added to deps
-        # e.g. self.client = XAgentClient(model=model, ...)
+        # Initialize XAgent config and controller
+        self.config = Config(model=self.model)
+        self.controller = Controller(config=self.config)
 
     def _convert_tools(self, tools: Iterable) -> List[Dict[str, Any]]:
-        """Convert L3AGI tool specs into XAgent-compatible tool descriptors.
-        Return a list/dict structure XAgent expects.
-        """
+        """Convert L3AGI tool specs into XAgent-compatible format."""
         converted = []
         for t in tools:
-            # Example conversion stub — update based on L3AGI tool structure
             converted.append({
                 "name": getattr(t, "name", str(t)),
                 "description": getattr(t, "description", ""),
-                "callable": getattr(t, "call", None),
+                # TODO: Map to callable if needed
             })
         return converted
 
     def invoke(self, input_text: str, **kwargs) -> Dict[str, Any]:
         """
-        Run the agent and return a result compatible with the previous ReAct-based caller.
-        Return structure example:
-          {
-            "output": "<text>",
-            "actions": [...],    # if tool calls were made
-            "raw": <raw_response_object>
-          }
+        Run XAgent with input_text and return dict similar to LangChain ReAct agent.
         """
-        # Convert tools
         x_tools = self._convert_tools(self.tools)
 
-        # TODO: call the XAgent API / client here and pass prompt, tools, etc.
-        # For now, return a stub response so the rest of the repo can be tested minimally.
-        stub_output = f"[xagent-adapter-stub] echo: {input_text}"
-        return {"output": stub_output, "actions": [], "raw": None}
+        # Example: call XAgent controller
+        try:
+            result = self.controller.run(input_text, tools=x_tools)
+            output_text = result.get("output", str(result))
+        except Exception as e:
+            output_text = f"[xagent-error] {e}"
+            result = {}
 
-    # Optional: a run() alias for code expecting run()
-    def run(self, *args, **kwargs):
-        return self.invoke(*args, **kwargs)
+        return {"output": output_text, "actions": [], "raw": result}
+
+    def run(self, input_text: str, **kwargs):
+        """Alias for invoke() to be compatible with older code."""
+        return self.invoke(input_text, **kwargs)
