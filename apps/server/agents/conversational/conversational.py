@@ -1,9 +1,6 @@
 import asyncio
 
 from langchain import hub
-from langchain.agents import (AgentExecutor, AgentType, create_react_agent,
-                              initialize_agent)
-
 from agents.base_agent import BaseAgent
 from agents.conversational.output_parser import ConvoOutputParser
 from agents.conversational.streaming_aiter import AsyncCallbackHandler
@@ -18,6 +15,9 @@ from typings.agent import AgentWithConfigsOutput
 from typings.config import AccountSettings, AccountVoiceSettings
 from utils.model import get_llm
 from utils.system_message import SystemMessageBuilder
+
+#  Import our shim
+from adapters.agent_executor_shim import AgentExecutorShim
 
 
 class ConversationalAgent(BaseAgent):
@@ -70,25 +70,8 @@ class ConversationalAgent(BaseAgent):
             #     streaming_handler,
             # ]
 
-            # agent = initialize_agent(
-            #     tools,
-            #     llm,
-            #     agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
-            #     verbose=True,
-            #     memory=memory,
-            #     handle_parsing_errors="Check your output and make sure it conforms!",
-            #     agent_kwargs={
-            #         "system_message": system_message,
-            #         "output_parser": ConvoOutputParser(),
-            #     },
-            #     callbacks=[run_logs_manager.get_agent_callback_handler()],
-            # )
 
-            agentPrompt = hub.pull("hwchase17/react")
-
-            agent = create_react_agent(llm, tools, prompt=agentPrompt)
-
-            agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+            agent_executor = AgentExecutorShim(llm=llm, tools=tools, prompt=system_message)
 
             chunks = []
             final_answer_detected = False
@@ -118,9 +101,7 @@ class ConversationalAgent(BaseAgent):
             full_response = "".join(chunks)
             final_answer_index = full_response.find("Final Answer:")
             if final_answer_index != -1:
-                # Add the length of the phrase "Final Answer:" and any subsequent whitespace or characters you want to skip
                 start_index = final_answer_index + len("Final Answer:")
-                # Optionally strip leading whitespace
                 res = full_response[start_index:].lstrip()
             else:
                 res = "Final Answer not found in response."
