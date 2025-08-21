@@ -10,8 +10,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 # Import XAgent APIs
 try:
-    from XAgent.controller import Controller  # Note: capital X
-    from XAgent.config import Config
+    from xagent.controllers.controller import Controller
+    from xagent.configs import Config
 except ImportError as e:
     raise ImportError(
         "XAgent is not installed or cannot be imported. "
