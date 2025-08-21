@@ -1,21 +1,17 @@
 """
 External dependencies bootstrapper.
 
-This file ensures that the `xagent` package from external/XAgent is importable,
-even though the upstream OpenBMB/XAgent repo is not properly packaged for pip.
-
-Usage:
-    import xagent
-    from xagent.controllers.controller import Controller
+Ensures external/XAgent/xagent is on sys.path if present.
 """
 
 import os
 import sys
 
-# Path to the checked-out external XAgent repo
-_xagent_path = os.path.join(os.path.dirname(__file__), "XAgent")
+_pkg_root = os.path.dirname(__file__)
+_xagent_src = os.path.join(_pkg_root, "XAgent", "xagent")
+_symlink_candidate = os.path.join(_pkg_root, "xagent")
 
-if os.path.isdir(os.path.join(_xagent_path, "xagent")):
-    xagent_src = os.path.join(_xagent_path, "xagent")
-    if xagent_src not in sys.path:
-        sys.path.insert(0, xagent_src)
+if os.path.isdir(_xagent_src) and _xagent_src not in sys.path:
+    sys.path.insert(0, _xagent_src)
+elif os.path.isdir(_symlink_candidate) and _symlink_candidate not in sys.path:
+    sys.path.insert(0, _symlink_candidate)
